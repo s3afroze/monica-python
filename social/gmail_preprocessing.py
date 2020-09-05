@@ -3,6 +3,8 @@
 
 We will put functions to help us clean the data concerning gmail
 
+# we can replace email by most popular email in dataframe!!
+
 """
 import re
 import pandas as pd

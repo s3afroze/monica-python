@@ -8,6 +8,7 @@ import re
 import pandas as pd
 from datetime import datetime
 from social.utils import Utils
+import jellyfish
 
 class Preprocessing:
 	def __init__(self, linkedin_messages_file_path, monica_contacts_file_path):
@@ -18,34 +19,22 @@ class Preprocessing:
 		-----------		
 
 		"""
-		self.gmail_json_file_path = gmail_json_file_path
+		self.linkedin_messages_file_path = linkedin_messages_file_path
 		self.monica_contacts_file_path = monica_contacts_file_path
 		self.utils = Utils()
 
-	def combine_monica_contacts_with_linkedin_df(self, monica_contacts_df, gmail_df_cleaned, your_email):
-		utils = self.utils
-		contact_id_dict = utils.create_contact_id_dict(monica_contacts_df)
-		gmail_df_cleaned = gmail_df_cleaned.copy()	
 
-		gmail_df_cleaned['contact_id_from'] = gmail_df_cleaned['from_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
-		gmail_df_cleaned['contact_id_to'] = gmail_df_cleaned['to_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
+	def prepare_dataframe(self):
 		
-		gmail_df_cleaned.loc[gmail_df_cleaned['from_dict_email']==your_email, 'contact_id_from'] = ""
-		gmail_df_cleaned.loc[gmail_df_cleaned['to_dict_email']==your_email, 'contact_id_to'] = ""
-
-		return gmail_df_cleaned
-
-	def prepare_dataframe(self, your_email):
-		
-		gmail_json_file_path = self.gmail_json_file_path
+		linkedin_messages_file_path = self.linkedin_messages_file_path
 		monica_contacts_file_path = self.monica_contacts_file_path
 				
 		monica_contacts_df = pd.read_csv(monica_contacts_file_path)
-		gmail_df_raw = pd.read_json(gmail_json_file_path)
+		linkedin_df_raw = pd.read_csv(linkedin_messages_file_path)
 
-		# gmail_df_cleaned = self.apply(gmail_df_raw).copy() # fixing copy error pandas
-		gmail_df_cleaned = self.apply(gmail_df_raw)					
-		merged_df = self.combine_monica_contacts_with_gmail_df(monica_contacts_df, gmail_df_cleaned, your_email)
+		# linkedin_df_cleaned = self.apply(linkedin_df_raw).copy() # fixing copy error pandas
+		linkedin_df_cleaned = self.apply(linkedin_df_raw)					
+		merged_df = self.combine_monica_contacts_with_gmail_df(monica_contacts_df, linkedin_df_cleaned, your_email)
 
 		merged_df['written_by_me'] = False
 		merged_df.loc[merged_df['from_dict_email']==your_email, 'written_by_me'] = True
@@ -62,29 +51,38 @@ class Preprocessing:
 	def apply(self, df):
 		
 
-		df['from_dict'] = df['from'].apply(lambda x: self.extract_first_element(x))
-		df['from_dict_email'] = df['from_dict'].apply(lambda x: self.extract_email_address(x))   
-		df['from_dict_name'] = df['from_dict'].apply(lambda x: self.extract_name(x)) 
+		df['FROM'] = df['FROM'].str.lower()
+		df['TO'] = df['TO'].str.lower()
 
-		df['to_dict'] = df['to'].apply(lambda x: self.extract_first_element(x))
-		df['to_dict_email'] = df['to_dict'].apply(lambda x: self.extract_email_address(x)) 
+		df['FROM'] = df['FROM'].str.strip()
+		df['TO'] = df['TO'].str.strip()
 
-		df['to_dict_name'] = df['to_dict'].apply(lambda x: self.extract_name(x)) 
+		df["DATE_TIME"] = pd.to_datetime(df['DATE'])
 
-		df['subject'] = df['subject'].apply(lambda x: self.clean_subject_line(x))
-		df['date_time'] = df['date']
-		df['date'] = df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-		
-		# remove addresses with 'no reply'
-		df = df[~df['from_dict_email'].str.contains('reply', na=False)]
+		df['DATE'] = df['DATE_TIME'].apply(lambda x: x.strftime('%Y-%m-%d'))
+		df["CONTENT"] = df["CONTENT"].str.replace("&nbsp", " ")
+		df["CONTENT"] = df["CONTENT"].apply(lambda x: self.deEmojify(x))
+
 
 		# remove columns not needed for upload
-		df.drop(columns=['from', 'to', 'from_dict', 'to_dict', 'receivedDate', 
-						'html', 'cc', 'headers', 
-						'priority', 'attachments', 'bcc', 'alternatives', 
-						'references', 'inReplyTo', 'replyTo'], inplace=True)
+		df.drop(columns=['CONVERSATION TITLE', 'FOLDER', 'SUBJECT'], inplace=True)
 
 		return df
+
+
+	def combine_monica_contacts_with_linkedin_df(self, monica_contacts_df, linkedin_df_cleaned, your_email):
+		utils = self.utils
+		contact_id_dict = utils.create_contact_id_dict(monica_contacts_df)
+		linkedin_df_cleaned = linkedin_df_cleaned.copy()	
+
+		linkedin_df_cleaned['contact_id_from'] = linkedin_df_cleaned['from_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
+		linkedin_df_cleaned['contact_id_to'] = linkedin_df_cleaned['to_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
+		
+		linkedin_df_cleaned.loc[linkedin_df_cleaned['from_dict_email']==your_email, 'contact_id_from'] = ""
+		linkedin_df_cleaned.loc[linkedin_df_cleaned['to_dict_email']==your_email, 'contact_id_to'] = ""
+
+		return linkedin_df_cleaned
+
 
 	# credits to @jfs from stackoverflow - https://stackoverflow.com/questions/33404752/removing-emojis-from-a-string-in-python
 	def deEmojify(self, text):

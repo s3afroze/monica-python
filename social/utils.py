@@ -8,7 +8,7 @@ Description: We will put all general functions to help the other classes
 """
 import pandas as pd
 from monica.conversations import Conversations
-from fuzzywuzzy import process, fuzz
+import jellyfish
 
 basic_api = 'https://app.monicahq.com/api'
 
@@ -67,6 +67,16 @@ class Utils:
 		contact_id_dict = pd.Series(monica_contacts_df.id.values,index=monica_contacts_df.complete_name).to_dict()
 
 		return contact_id_dict
+
+
+	def most_frequent(self, List): 
+		return max(set(List), key = List.count) 
+
+	def fuzzy_contact_name_match(search_name, monica_contact_list, benchmark=0.8):
+		for monica_contact in monica_contact_list:
+			score = jellyfish.jaro_winkler_similarity(search_name, monica_contact)
+			if score>=benchmark:
+				return 
 
 
 	# def create_fuzzy_name_email_dict(self, df, name):

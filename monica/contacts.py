@@ -96,10 +96,12 @@ class Contacts:
 
 		"""
 		utils = self.utils
+		wait_time = self.wait_time
 
 		json_orig = self.list_contacts(limit=100, page=1, sort=sort) # pull 1st page
 		max_page = json_orig['meta']['last_page']+1
 		for page_number in range(2, max_page):
+			time.sleep(wait_time)
 		    json_new = self.list_contacts(limit=100, page=page_number, sort=sort)
 		    json_orig = utils.merge_json_data(json_orig, json_new)
 

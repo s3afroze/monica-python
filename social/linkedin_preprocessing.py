@@ -61,7 +61,7 @@ class Preprocessing:
 
 		df['DATE'] = df['DATE_TIME'].apply(lambda x: x.strftime('%Y-%m-%d'))
 		df["CONTENT"] = df["CONTENT"].str.replace("&nbsp", " ")
-		df["CONTENT"] = df["CONTENT"].apply(lambda x: self.deEmojify(x))
+		# df["CONTENT"] = df["CONTENT"].apply(lambda x: self.deEmojify(x))
 
 
 		# remove columns not needed for upload
@@ -129,97 +129,4 @@ class Preprocessing:
 
 		except:
 			return subject
-
-
-	def extract_first_element(self, list_of_emails):
-		"""
-		Extracts the first email from the list
-
-		Parameters: 
-		-----------
-		list_of_emails: list
-			list of emails
-		
-
-		Returns: 
-		-------
-		email: str
-			first email in the list for example if the email has been sent to multiple to several people,
-			only first email address will be taken into account.
-
-		"""    
-		try:
-			return list_of_emails[0]
-		except:
-			return ""
-
-	def extract_name(self, gmail_dict):
-		"""
-		Extracts the first name from the dict
-
-		Parameters: 
-		-----------
-		gmail_dict: dict
-			dict holding the recipient or sender's information
-		
-
-		Returns: 
-		-------
-		name: str
-			name of the recipient or sender of email 
-
-		"""
-		try:
-			return gmail_dict['name'].lower()
-		except:
-			return ""
-
-
-	def extract_email_address(self, gmail_dict):
-		"""
-		Extracts the email address from the dict
-
-		Parameters: 
-		-----------
-		gmail_dict: dict
-			dict holding the recipient or sender's information
-		
-
-		Returns: 
-		-------
-		email: str
-			email of the recipient or sender depending on gmail dict 
-
-		"""
-		try:
-			return gmail_dict['address'].lower()
-		except:
-			return ""
-
-	def extract_date(self, date_time):
-		"""
-		Extracts the date from receivedDate key in dict and parse in a format for monica api
-
-
-		Parameters: 
-		-----------
-		date_time: datetime object
-			datetime object from the gmail data
-		
-
-		Returns: 
-		-------
-		date: str
-			Returns date in Format: YYYY-MM-DD.
-
-		"""
-
-		try:
-			return date_time.strftime('%Y-%m-%d')
-		except:
-			return ""
-
-
-
-
 

@@ -102,8 +102,8 @@ class Contacts:
 		max_page = json_orig['meta']['last_page']+1
 		for page_number in range(2, max_page):
 			time.sleep(wait_time)
-		    json_new = self.list_contacts(limit=100, page=page_number, sort=sort)
-		    json_orig = utils.merge_json_data(json_orig, json_new)
+			json_new = self.list_contacts(limit=100, page=page_number, sort=sort)
+			json_orig = utils.merge_json_data(json_orig, json_new)
 
 		json_merged = json_orig.copy() # renmaing variable in the end of the loop
 

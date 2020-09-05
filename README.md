@@ -114,6 +114,37 @@ conversations.add_multiple_messages(contact_id, conversation_id, df)
 
 ```
 
+## Contact Field Types API
+
+1. Initating the conversations API
+```python
+from monica.contact_field_types import Contact_Field_Types
+import pandas as pd
+
+contact_field_types = Contact_Field_Types(access_token)
+
+```
+
+2. Lists all field types on your monica 
+
+```python
+
+json_data = contact_field_types.list_all()
+df = pd.DataFrame[json_data['data']]
+df.head()
+
+```
+
+
+3. Retreive ID of field type
+
+```python
+
+field_type_id = contact_field_types.get_contact_field_type_id(object_name)
+
+```
+
+
 
 Check out how to upload gmail data [here](examples/gmail.md)
 

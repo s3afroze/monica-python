@@ -32,7 +32,7 @@ class Linkedin_Monica_Client:
 		self.contact_field_types = Contact_Field_Types(access_token=access_token)
 		
 
-	def upload_emails_to_monica(self, df_preprocessed):
+	def upload_conversations_to_monica(self, df_preprocessed):
 		conversations = self.conversations
 		contact_field_types = self.contact_field_types
 		

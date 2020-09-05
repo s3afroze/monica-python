@@ -76,7 +76,7 @@ conversation_id = conversations.create_conversation_object(happened_at, contact_
 4. Add message to a conversation object
 ```python
 
-conversations.add_message(written_at, written_by_me, content, contact_id, conversation_id):
+conversations.add_message(written_at, written_by_me, content, contact_id, conversation_id)
 
 ```
 

@@ -25,24 +25,28 @@ class Preprocessing:
 
 
 	def prepare_dataframe(self):
-		
+		utils = self.utils
 		linkedin_messages_file_path = self.linkedin_messages_file_path
 		monica_contacts_file_path = self.monica_contacts_file_path
 				
 		monica_contacts_df = pd.read_csv(monica_contacts_file_path)
+		monica_contacts_df['complete_name'] = monica_contacts_df['complete_name'].str.lower()
+
 		linkedin_df_raw = pd.read_csv(linkedin_messages_file_path)
 
 		# linkedin_df_cleaned = self.apply(linkedin_df_raw).copy() # fixing copy error pandas
-		linkedin_df_cleaned = self.apply(linkedin_df_raw)					
-		merged_df = self.combine_monica_contacts_with_gmail_df(monica_contacts_df, linkedin_df_cleaned, your_email)
+		linkedin_df_cleaned = self.apply(linkedin_df_raw)			
+		my_name = utils.find_my_info(col1='FROM', col2='TO', df=linkedin_df_cleaned)
+
+		merged_df = self.combine_monica_contacts_with_linkedin_df(monica_contacts_df, linkedin_df_cleaned, my_name)
 
 		merged_df['written_by_me'] = False
-		merged_df.loc[merged_df['from_dict_email']==your_email, 'written_by_me'] = True
+		merged_df.loc[merged_df['FROM']==my_name, 'written_by_me'] = True
 
 		merged_df['contact_id'] = merged_df.apply(lambda x: max(str(x['contact_id_from']), str(x['contact_id_to'])), axis=1)
 
 		# key identifier
-		merged_df['key'] = merged_df['subject'] + merged_df['contact_id']
+		merged_df['key'] = merged_df['CONVERSATION ID']
 		
 
 		return merged_df
@@ -50,6 +54,8 @@ class Preprocessing:
 
 	def apply(self, df):
 		
+		df = df[~df['FROM'].isna()]
+		df = df[~df['TO'].isna()]
 
 		df['FROM'] = df['FROM'].str.lower()
 		df['TO'] = df['TO'].str.lower()
@@ -57,29 +63,60 @@ class Preprocessing:
 		df['FROM'] = df['FROM'].str.strip()
 		df['TO'] = df['TO'].str.strip()
 
-		df["DATE_TIME"] = pd.to_datetime(df['DATE'])
+		df["date_time"] = pd.to_datetime(df['DATE'])
 
-		df['DATE'] = df['DATE_TIME'].apply(lambda x: x.strftime('%Y-%m-%d'))
-		df["CONTENT"] = df["CONTENT"].str.replace("&nbsp", " ")
+		df['date'] = df['date_time'].apply(lambda x: x.strftime('%Y-%m-%d'))
+		df["text"] = df["CONTENT"].str.replace("&nbsp", " ")
 		# df["CONTENT"] = df["CONTENT"].apply(lambda x: self.deEmojify(x))
 
 
 		# remove columns not needed for upload
-		df.drop(columns=['CONVERSATION TITLE', 'FOLDER', 'SUBJECT'], inplace=True)
+		df.drop(columns=['CONVERSATION TITLE', 'FOLDER', 'SUBJECT', 'CONTENT', 'DATE'], inplace=True)
+
+		return df
+
+	def prepare_fuzzy_dataframe(self, monica_contacts_df, linkedin_df_cleaned, my_name):
+		utils = self.utils
+		
+		temp_df = pd.DataFrame()
+		temp_df['FROM']= linkedin_df_cleaned.drop_duplicates(subset=['FROM'])['FROM']
+		temp_df['TO']= linkedin_df_cleaned.drop_duplicates(subset=['TO'])['TO']
+
+		to_list = list(linkedin_df_cleaned.drop_duplicates(subset=['TO'])['TO'].reset_index(drop=True))
+		from_list = list(linkedin_df_cleaned.drop_duplicates(subset=['FROM'])['FROM'].reset_index(drop=True))
+
+		all_correspondence = from_list + to_list
+		df = pd.DataFrame(all_correspondence, columns=['linkedin_name'])
+		df.drop_duplicates(subset='linkedin_name')
+
+		df['linkedin_name'] = df['linkedin_name'].str.lower()
+		df = df[~df['linkedin_name'].isna()]
+
+		monica_contact_list = list(monica_contacts_df["complete_name"].str.lower())
+
+		# connect names of monica
+		df['monica_name'] = df['linkedin_name'].apply(lambda x:utils.fuzzy_contact_name_match(search_name=x, monica_contact_list=monica_contact_list, my_name=my_name, benchmark=0.8))
 
 		return df
 
 
-	def combine_monica_contacts_with_linkedin_df(self, monica_contacts_df, linkedin_df_cleaned, your_email):
+	def combine_monica_contacts_with_linkedin_df(self, monica_contacts_df, linkedin_df_cleaned, my_name):
 		utils = self.utils
+		fuzzy_df = self.prepare_fuzzy_dataframe(monica_contacts_df, linkedin_df_cleaned, my_name)
+		fuzzy_monica_linkedin_dict = utils.create_fuzzy_monica_linkedin_dict(fuzzy_df)
+			
+		# connect names of monica
+		linkedin_df_cleaned['monica_from_full_name'] = linkedin_df_cleaned['FROM'].apply(lambda x:utils.retreive_fuzzy_monica_name(linkedin_name=x, fuzzy_monica_linkedin_dict=fuzzy_monica_linkedin_dict))
+		linkedin_df_cleaned['monica_to_full_name'] = linkedin_df_cleaned['TO'].apply(lambda x:utils.retreive_fuzzy_monica_name(linkedin_name=x, fuzzy_monica_linkedin_dict=fuzzy_monica_linkedin_dict))
+
 		contact_id_dict = utils.create_contact_id_dict(monica_contacts_df)
 		linkedin_df_cleaned = linkedin_df_cleaned.copy()	
 
-		linkedin_df_cleaned['contact_id_from'] = linkedin_df_cleaned['from_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
-		linkedin_df_cleaned['contact_id_to'] = linkedin_df_cleaned['to_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
-		
-		linkedin_df_cleaned.loc[linkedin_df_cleaned['from_dict_email']==your_email, 'contact_id_from'] = ""
-		linkedin_df_cleaned.loc[linkedin_df_cleaned['to_dict_email']==your_email, 'contact_id_to'] = ""
+		linkedin_df_cleaned['contact_id_from'] = linkedin_df_cleaned['monica_from_full_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
+		linkedin_df_cleaned['contact_id_to'] = linkedin_df_cleaned['monica_to_full_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
+
+		linkedin_df_cleaned.loc[linkedin_df_cleaned['monica_from_full_name']==my_name, 'contact_id_from'] = ""
+		linkedin_df_cleaned.loc[linkedin_df_cleaned['monica_to_full_name']==my_name, 'contact_id_to'] = ""
 
 		return linkedin_df_cleaned
 

@@ -39,14 +39,14 @@ class Linkedin_Monica_Client:
 		df_preprocessed = df_preprocessed[df_preprocessed['contact_id']!=""] # remove contacts which are not on monica
 		df_preprocessed = df_preprocessed[~df_preprocessed['key'].isna()] # remove nan for subjects
 
-		contact_field_type_id = contact_field_types.get_contact_field_type_id("Email")
+		contact_field_type_id = contact_field_types.get_contact_field_type_id("LinkedIn")
 		
 		unique_keys = list(df_preprocessed['key'].unique())
 		# unique_keys = [x for x in unique_keys if str(x) == 'permission432610'] # testing
+		# unique_keys = [unique_keys[0]]
+		# pprint(df_preprocessed)
 
 		for key in unique_keys:
-			print(key)
-			print()
 			subset = df_preprocessed[df_preprocessed['key']==key]
 			subset.sort_values(by='date_time', inplace=True)
 			contact_id = subset['contact_id'].values[0]

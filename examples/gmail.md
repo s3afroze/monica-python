@@ -2,7 +2,6 @@
 
 ```python
 from social.gmail_preprocessing import Preprocessing
-from social.utils import Utils
 from social.gmail_monica_client import Gmail_Monica_Client
 
 my_email = ""

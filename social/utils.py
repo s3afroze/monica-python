@@ -68,37 +68,52 @@ class Utils:
 
 		return contact_id_dict
 
+	def create_fuzzy_monica_linkedin_dict(self, fuzzy_df):
+
+		fuzzy_monica_linkedin_dict = pd.Series(fuzzy_df.linkedin_name.values,index=fuzzy_df.monica_name).to_dict()
+
+		return fuzzy_monica_linkedin_dict
+	
+	def retreive_fuzzy_monica_name(self, fuzzy_monica_linkedin_dict, linkedin_name):
+		try:
+			monica_name = fuzzy_monica_linkedin_dict[linkedin_name]
+		except:
+			monica_name = ''
+
+
+		return monica_name
+	
 
 	def most_frequent(self, List): 
 		return max(set(List), key = List.count) 
 
-	def fuzzy_contact_name_match(search_name, monica_contact_list, benchmark=0.8):
-		for monica_contact in monica_contact_list:
-			score = jellyfish.jaro_winkler_similarity(search_name, monica_contact)
-			if score>=benchmark:
-				return 
+	# to be used for converting dataframe into columns and applying it to most frequent
+	def find_my_info(self, col1, col2, df):
+		list_1=list(df[col1].values)
+		list_2=list(df[col2].values)
+
+		all_info=list_1 + list_2
+		my_info = self.most_frequent(all_info)
+		
+		return my_info
 
 
-	# def create_fuzzy_name_email_dict(self, df, name):
-	# 	df.drop_duplicates(subset=["from_dict_name"], inplace=True)
-	# 	df_subset = df[['from_dict_email', 'from_dict_name']]
-	# 	unique_names = df['from_dict_name'].unique()
-	# 	fuzzy_scores = process.extract(name, unique_names, scorer=fuzz.token_sort_ratio)
-	# 	all_names = [el[0] for el in fuzzy_scores]
-	# 	all_scores = [el[1] for el in fuzzy_scores]
-
-	# 	pattern = '|'.join(all_names)
-
-	# 	fuzzy_match_df = df_subset[df_subset['from_dict_name'].str.contains(pattern, case=False)]
+	def fuzzy_contact_name_match(self, search_name, monica_contact_list, my_name, benchmark=0.85):
+		all_score = []
+		if search_name!=my_name:
+			for monica_contact in monica_contact_list:
+				score = jellyfish.jaro_winkler_similarity(search_name, monica_contact)			
+				all_score.append(score)
+		
+			name_matched = self.find_max_score_name(monica_contact_list, all_score, benchmark)
+			return name_matched
 
 
-
-	# 	return fuzzy_match_df
-
-
-
-
-
-
+	def find_max_score_name(self, monica_contact_list, all_score, benchmark):
+		max_score = max(all_score)
+		if max_score>=benchmark:
+			index_of_max_score = all_score.index(max_score)
+			name_with_highest_similarity = monica_contact_list[index_of_max_score]
+			return name_with_highest_similarity
 
 

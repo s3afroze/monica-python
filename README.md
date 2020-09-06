@@ -149,7 +149,7 @@ field_type_id = contact_field_types.get_contact_field_type_id(object_name)
 Check out how to upload gmail data [here](examples/gmail.md)
 
 ## Linkedin Monica Client API
-Check out how to upload gmail data [here](examples/linkedin.md)
+Check out how to upload linkedin data [here](examples/linkedin.md)
 
 
 

@@ -24,7 +24,7 @@ class Preprocessing:
 		self.monica_contacts_file_path = monica_contacts_file_path
 		self.utils = Utils()
 
-	def combine_monica_contacts_with_gmail_df(self, monica_contacts_df, gmail_df_cleaned, your_email):
+	def combine_monica_contacts_with_gmail_df(self, monica_contacts_df, gmail_df_cleaned, my_email):
 		utils = self.utils
 		contact_id_dict = utils.create_contact_id_dict(monica_contacts_df)
 		gmail_df_cleaned = gmail_df_cleaned.copy()	
@@ -32,25 +32,29 @@ class Preprocessing:
 		gmail_df_cleaned['contact_id_from'] = gmail_df_cleaned['from_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
 		gmail_df_cleaned['contact_id_to'] = gmail_df_cleaned['to_dict_name'].apply(lambda x:utils.retreive_contact_id(full_name=x, contact_id_dict=contact_id_dict))
 		
-		gmail_df_cleaned.loc[gmail_df_cleaned['from_dict_email']==your_email, 'contact_id_from'] = ""
-		gmail_df_cleaned.loc[gmail_df_cleaned['to_dict_email']==your_email, 'contact_id_to'] = ""
+		gmail_df_cleaned.loc[gmail_df_cleaned['from_dict_email']==my_email, 'contact_id_from'] = ""
+		gmail_df_cleaned.loc[gmail_df_cleaned['to_dict_email']==my_email, 'contact_id_to'] = ""
 
 		return gmail_df_cleaned
 
-	def prepare_dataframe(self, your_email):
+	def prepare_dataframe(self):
+		utils = self.utils
 		
 		gmail_json_file_path = self.gmail_json_file_path
 		monica_contacts_file_path = self.monica_contacts_file_path
-				
+
 		monica_contacts_df = pd.read_csv(monica_contacts_file_path)
 		gmail_df_raw = pd.read_json(gmail_json_file_path)
 
 		# gmail_df_cleaned = self.apply(gmail_df_raw).copy() # fixing copy error pandas
-		gmail_df_cleaned = self.apply(gmail_df_raw)					
-		merged_df = self.combine_monica_contacts_with_gmail_df(monica_contacts_df, gmail_df_cleaned, your_email)
+		gmail_df_cleaned = self.apply(gmail_df_raw)			
+		my_email = utils.find_my_info(col1='to_dict_email', col2='from_dict_email', df=gmail_df_cleaned)
+		# print(my_email)
+
+		merged_df = self.combine_monica_contacts_with_gmail_df(monica_contacts_df, gmail_df_cleaned, my_email)
 
 		merged_df['written_by_me'] = False
-		merged_df.loc[merged_df['from_dict_email']==your_email, 'written_by_me'] = True
+		merged_df.loc[merged_df['from_dict_email']==my_email, 'written_by_me'] = True
 
 		merged_df['contact_id'] = merged_df.apply(lambda x: max(str(x['contact_id_from']), str(x['contact_id_to'])), axis=1)
 

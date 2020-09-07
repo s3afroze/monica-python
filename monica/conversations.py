@@ -105,7 +105,6 @@ class Conversations:
 					'contact_field_type_id': contact_field_type_id,
 					'contact_id':contact_id}
 
-
 		response = requests.post(api,  params=payload, headers=headers)    
 
 		json_data = response.json()

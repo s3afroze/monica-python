@@ -1,5 +1,4 @@
 # monica-python
-Connects to the Monica API and provides an easy to use python API.
 
 This Repo is work in progress. Future plan is to integrate data from other social media and emails.
 
